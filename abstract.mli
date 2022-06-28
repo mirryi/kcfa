@@ -1,4 +1,10 @@
-module Values : Set.S with type elt = Ast.labeled
+open Containers
+
+module Values : sig
+  include Set.S with type elt = Ast.labeled
+
+  val pp : t CCSet.printer
+end
 
 module Kind : sig
   type cache = Label.t [@@deriving show, eq, ord]
@@ -6,9 +12,18 @@ module Kind : sig
   type t = Cache of cache | Env of env [@@deriving show, eq, ord]
 end
 
-module CacheMap : Map.S with type key = Kind.cache
-module EnvMap : Map.S with type key = Kind.env
+module CacheMap : sig
+  include Map.S with type key = Kind.cache
 
-type cache = Values.t CacheMap.t
-type env = Values.t EnvMap.t
-type analysis = cache * env
+  val pp : 'a CCMap.printer -> 'a t CCMap.printer
+end
+
+module EnvMap : sig
+  include Map.S with type key = Kind.env
+
+  val pp : 'a CCMap.printer -> 'a t CCMap.printer
+end
+
+type cache = Values.t CacheMap.t [@@deriving show]
+type env = Values.t EnvMap.t [@@deriving show]
+type analysis = cache * env [@@deriving show]

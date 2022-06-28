@@ -21,6 +21,10 @@ type labeled =
 val label : t -> Label.t * labeled
 val label_of : labeled -> Label.t
 
-module Functions : Set.S with type elt = labeled
+module Functions : sig
+  include Set.S with type elt = labeled
+
+  val pp : t CCSet.printer
+end
 
 val functions : labeled -> Functions.t

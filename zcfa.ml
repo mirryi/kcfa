@@ -1,3 +1,4 @@
+open Containers
 open Abstract
 
 module Constraint = struct
@@ -9,7 +10,10 @@ module Constraint = struct
 end
 
 module Constraints = struct
-  include Set.Make (Constraint)
+  module M = Set.Make (Constraint) [@@deriving show]
+  include M
+
+  let pp = M.pp Constraint.pp
 
   (** [constraints astl] computes the set of constraints used to perform
       constraint-based 0-CFA analysis. *)
@@ -56,14 +60,21 @@ end
 
 module Solver = struct
   module Node = Kind
-  module NodeMap = Map.Make (Node)
+
+  module NodeMap = struct
+    module M = Map.Make (Node)
+    include M
+
+    let pp pp_v = M.pp Node.pp pp_v
+  end
 
   module State = struct
-    type work = Node.t list
-    type data = Values.t NodeMap.t
-    type edges = Constraint.t list NodeMap.t
-    type t = work * data * edges
+    type work = Node.t list [@@deriving show]
+    type data = Values.t NodeMap.t [@@deriving show]
+    type edges = Constraint.t list NodeMap.t [@@deriving show]
+    type t = work * data * edges [@@deriving show]
 
+    let _ = pp
     let init : t = ([], NodeMap.empty, NodeMap.empty)
 
     let find_data (p : Node.t) ((_, d, _) : t) : Values.t =
@@ -129,9 +140,11 @@ module Solver = struct
       (CacheMap.empty, EnvMap.empty)
 end
 
-let constraints ast =
+let label ast =
   let _, astl = Ast.label ast in
-  Constraints.constraints astl
+  astl
 
+let constraints = Constraints.constraints
 let solve = Solver.solve
-let analyse ast = ast |> constraints |> solve
+let analyse_labeled astl = astl |> constraints |> solve
+let analyse ast = ast |> label |> analyse_labeled

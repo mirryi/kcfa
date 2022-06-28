@@ -1,3 +1,5 @@
+open Containers
+
 type op = Add | Sub | Mult | Div [@@deriving show, eq, ord]
 
 type t =
@@ -65,11 +67,17 @@ let label_of = function
   | LBin (l, _, _, _) ->
       l
 
-module Functions = Set.Make (struct
-  type nonrec t = labeled
+module Functions = struct
+  module M = Set.Make (struct
+    type nonrec t = labeled
 
-  let compare = compare_labeled
-end)
+    let compare = compare_labeled
+  end)
+
+  include M
+
+  let pp = M.pp pp_labeled
+end
 
 (** [functions astl] accumulates the set of functions in [astl]. *)
 let functions astl =

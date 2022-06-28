@@ -1,8 +1,16 @@
-module Values = Set.Make (struct
-  type t = Ast.labeled
+open Containers
 
-  let compare = Ast.compare_labeled
-end)
+module Values = struct
+  module M = Set.Make (struct
+    type t = Ast.labeled
+
+    let compare = Ast.compare_labeled
+  end)
+
+  include M
+
+  let pp = M.pp Ast.pp_labeled
+end
 
 module Kind = struct
   type cache = Label.t [@@deriving show, eq, ord]
@@ -10,18 +18,30 @@ module Kind = struct
   type t = Cache of cache | Env of env [@@deriving show, eq, ord]
 end
 
-module CacheMap = Map.Make (struct
-  type t = Kind.cache
+module CacheMap = struct
+  module M = Map.Make (struct
+    type t = Kind.cache
 
-  let compare = Kind.compare_cache
-end)
+    let compare = Kind.compare_cache
+  end)
 
-module EnvMap = Map.Make (struct
-  type t = Kind.env
+  include M
 
-  let compare = Kind.compare_env
-end)
+  let pp pp_v = M.pp Kind.pp_cache pp_v
+end
 
-type cache = Values.t CacheMap.t
-type env = Values.t EnvMap.t
-type analysis = cache * env
+module EnvMap = struct
+  module M = Map.Make (struct
+    type t = Kind.env
+
+    let compare = Kind.compare_env
+  end)
+
+  include M
+
+  let pp pp_v = M.pp Kind.pp_env pp_v
+end
+
+type cache = Values.t CacheMap.t [@@deriving show]
+type env = Values.t EnvMap.t [@@deriving show]
+type analysis = cache * env [@@deriving show]

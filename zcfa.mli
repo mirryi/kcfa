@@ -8,8 +8,14 @@ module Constraint : sig
   [@@deriving show, eq, ord]
 end
 
-module Constraints : Set.S with type elt = Constraint.t
+module Constraints : sig
+  include Set.S with type elt = Constraint.t
 
-val constraints : Ast.t -> Constraints.t
+  val pp : t CCSet.printer
+end
+
+val label : Ast.t -> Ast.labeled
+val constraints : Ast.labeled -> Constraints.t
 val solve : Constraints.t -> Abstract.analysis
 val analyse : Ast.t -> Abstract.analysis
+val analyse_labeled : Ast.labeled -> Abstract.analysis
