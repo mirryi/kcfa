@@ -20,7 +20,7 @@ module type MONAD = sig
   end
 end
 
-module Make (M : MONAD_BASIC) : MONAD with type 'a t := 'a M.t = struct
+module Make (M : MONAD_BASIC) : MONAD with type 'a t = 'a M.t = struct
   include M
 
   let map m k = bind m (fun a -> return (k a))
@@ -37,13 +37,8 @@ end
 
 module State (ST : sig
   type t
-end) : sig
-  include MONAD with type 'a t = ST.t -> ST.t * 'a
-
-  val get : ST.t t
-  val put : ST.t -> unit t
-  val update : (ST.t -> ST.t) -> unit t
-end = struct
+end) =
+struct
   module M = struct
     type 'a t = ST.t -> ST.t * 'a
 

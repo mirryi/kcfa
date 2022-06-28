@@ -1,5 +1,4 @@
 open Abstract
-open Flow
 
 module Constraint = struct
   type t =
@@ -61,14 +60,14 @@ module Solver = struct
 
   module State = struct
     type work = Node.t list
-    type data = AstSet.t NodeMap.t
+    type data = Values.t NodeMap.t
     type edges = Constraint.t list NodeMap.t
     type t = work * data * edges
 
     let init : t = ([], NodeMap.empty, NodeMap.empty)
 
-    let find_data (p : Node.t) ((_, d, _) : t) : AstSet.t =
-      NodeMap.find_opt p d |> Option.value ~default:AstSet.empty
+    let find_data (p : Node.t) ((_, d, _) : t) : Values.t =
+      NodeMap.find_opt p d |> Option.value ~default:Values.empty
 
     let find_edge (p : Node.t) ((_, _, e) : t) : Constraint.t list =
       NodeMap.find_opt p e |> Option.value ~default:[]
@@ -77,11 +76,11 @@ module Solver = struct
       let e = NodeMap.add p (cc :: find_edge p (w, d, e)) e in
       (w, d, e)
 
-    let add (q : Node.t) (dq' : AstSet.t) ((w, d, e) as s : t) : t =
+    let add (q : Node.t) (dq' : Values.t) ((w, d, e) as s : t) : t =
       let dq = find_data q s in
-      match AstSet.subset dq' dq with
+      match Values.subset dq' dq with
       | true | false ->
-          let d = NodeMap.add q (AstSet.union dq dq') d in
+          let d = NodeMap.add q (Values.union dq dq') d in
           let w = q :: w in
           (w, d, e)
   end
@@ -92,7 +91,7 @@ module Solver = struct
     |> Seq.fold_left
          (fun s (cc : Constraint.t) ->
            match cc with
-           | Concrete (t, p) -> s |> add p (AstSet.singleton t)
+           | Concrete (t, p) -> s |> add p (Values.singleton t)
            | Subset (p1, _p2) -> s |> extend_edge p1 cc
            | Conditional (_t, p, p1, _p2) ->
                s |> extend_edge p1 cc |> extend_edge p cc)
@@ -111,7 +110,7 @@ module Solver = struct
                | Concrete (_, _) -> s
                | Subset (p1, p2) -> s |> add p2 (find_data p1 s)
                | Conditional (t, p, p1, p2) ->
-                   if AstSet.subset (AstSet.singleton t) (find_data p s) then
+                   if Values.subset (Values.singleton t) (find_data p s) then
                      s |> add p2 (find_data p1 s)
                    else s)
              (w, d, e)

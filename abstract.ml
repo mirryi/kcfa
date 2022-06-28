@@ -1,4 +1,8 @@
-open Flow
+module Values = Set.Make (struct
+  type t = Ast.labeled
+
+  let compare = Ast.compare_labeled
+end)
 
 module Kind = struct
   type cache = Label.t [@@deriving show, eq, ord]
@@ -18,6 +22,6 @@ module EnvMap = Map.Make (struct
   let compare = Kind.compare_env
 end)
 
-type cache = AstSet.t CacheMap.t
-type env = AstSet.t EnvMap.t
+type cache = Values.t CacheMap.t
+type env = Values.t EnvMap.t
 type analysis = cache * env
