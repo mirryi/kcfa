@@ -1,6 +1,7 @@
 opam-version: "2.0"
 compiler: ["ocaml.4.14.0"]
 roots: [
+  "containers.3.8"
   "ocaml-lsp-server.1.12.1"
   "ocamlformat.0.21.0"
   "ocamlformat-rpc.0.21.0"
@@ -14,6 +15,7 @@ installed: [
   "base-threads.base"
   "base-unix.base"
   "cmdliner.1.1.1"
+  "containers.3.8"
   "cppo.1.6.9"
   "csexp.1.5.1"
   "dune.3.3.1"
