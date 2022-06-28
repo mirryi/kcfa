@@ -10,12 +10,12 @@ type t =
 [@@deriving show, eq, ord]
 
 type labeled =
-  | Var of Label.t * Var.t
-  | Fun of Label.t * Var.t * labeled
-  | Ap of Label.t * labeled * labeled
-  | Let of Label.t * Var.t * labeled * labeled
-  | Int of Label.t * int
-  | Bin of Label.t * op * labeled * labeled
+  | LVar of Label.t * Var.t
+  | LFun of Label.t * Var.t * labeled
+  | LAp of Label.t * labeled * labeled
+  | LLet of Label.t * Var.t * labeled * labeled
+  | LInt of Label.t * int
+  | LBin of Label.t * op * labeled * labeled
 [@@deriving show, eq, ord]
 
 module LabelMonad = struct
@@ -36,33 +36,33 @@ let label ast =
     let* l = next in
 
     match ast with
-    | Var x -> Var (l, x) |> return
+    | Var x -> LVar (l, x) |> return
     | Fun (x, body) ->
         let* body = label body in
-        Fun (l, x, body) |> return
+        LFun (l, x, body) |> return
     | Ap (f, arg) ->
         let* f = label f in
         let* arg = label arg in
-        Ap (l, f, arg) |> return
+        LAp (l, f, arg) |> return
     | Let (x, e1, e2) ->
         let* e1 = label e1 in
         let* e2 = label e2 in
-        Let (l, x, e1, e2) |> return
-    | Int n -> Int (l, n) |> return
+        LLet (l, x, e1, e2) |> return
+    | Int n -> LInt (l, n) |> return
     | Bin (op, e1, e2) ->
         let* e1 = label e1 in
         let* e2 = label e2 in
-        Bin (l, op, e1, e2) |> return
+        LBin (l, op, e1, e2) |> return
   in
   label ast Label.init
 
 let label_of = function
-  | Var (l, _)
-  | Fun (l, _, _)
-  | Ap (l, _, _)
-  | Let (l, _, _, _)
-  | Int (l, _)
-  | Bin (l, _, _, _) ->
+  | LVar (l, _)
+  | LFun (l, _, _)
+  | LAp (l, _, _)
+  | LLet (l, _, _, _)
+  | LInt (l, _)
+  | LBin (l, _, _, _) ->
       l
 
 module Functions = Set.Make (struct
@@ -76,12 +76,12 @@ let functions astl =
   let rec functions (astl : labeled) =
     let open Functions in
     match astl with
-    | Var (_, _) -> empty
-    | Fun (_, _, body) -> union (singleton astl) (functions body)
-    | Ap (_, f, arg) -> union (functions f) (functions arg)
-    | Let (_, _, e1, e2) -> union (functions e1) (functions e2)
-    | Int (_, _) -> empty
-    | Bin (_, _, e1, e2) -> union (functions e1) (functions e2)
+    | LVar (_, _) -> empty
+    | LFun (_, _, body) -> union (singleton astl) (functions body)
+    | LAp (_, f, arg) -> union (functions f) (functions arg)
+    | LLet (_, _, e1, e2) -> union (functions e1) (functions e2)
+    | LInt (_, _) -> empty
+    | LBin (_, _, e1, e2) -> union (functions e1) (functions e2)
   in
 
   functions astl

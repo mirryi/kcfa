@@ -23,33 +23,33 @@ module Constraints = struct
 
     let rec constraints (astl : Ast.labeled) =
       match astl with
-      | Var (l, x) -> singleton (Subset (Env x, Cache l))
-      | Fun (l, _, body) as f ->
+      | LVar (l, x) -> singleton (Subset (Env x, Cache l))
+      | LFun (l, _, body) as f ->
           singleton (Concrete (f, Cache l)) +++ constraints body
-      | Ap (l, f, arg) ->
+      | LAp (l, f, arg) ->
           let l1 = Ast.label_of f in
           let l2 = Ast.label_of arg in
           constraints f +++ constraints arg
           +++ conditionals (fun f ->
                   match f with
-                  | Fun (_, x, _) ->
+                  | LFun (_, x, _) ->
                       Some (Conditional (f, Cache l1, Cache l2, Env x))
                   | _ -> None)
           +++ conditionals (fun f ->
                   match f with
-                  | Fun (_, _, body) ->
+                  | LFun (_, _, body) ->
                       Some
                         (Conditional
                            (f, Cache l1, Cache (Ast.label_of body), Cache l))
                   | _ -> None)
-      | Let (l, x, e1, e2) ->
+      | LLet (l, x, e1, e2) ->
           let l1 = Ast.label_of e1 in
           let l2 = Ast.label_of e2 in
           constraints e1 +++ constraints e2
           +++ singleton (Subset (Cache l1, Env x))
           +++ singleton (Subset (Cache l2, Cache l))
-      | Int (_, _) -> empty
-      | Bin (_, _, e1, e2) -> constraints e1 +++ constraints e2
+      | LInt (_, _) -> empty
+      | LBin (_, _, e1, e2) -> constraints e1 +++ constraints e2
     in
     constraints astl
 end

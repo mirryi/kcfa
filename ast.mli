@@ -10,12 +10,12 @@ type t =
 [@@deriving show, eq, ord]
 
 type labeled =
-  | Var of Label.t * Var.t
-  | Fun of Label.t * Var.t * labeled
-  | Ap of Label.t * labeled * labeled
-  | Let of Label.t * Var.t * labeled * labeled
-  | Int of Label.t * int
-  | Bin of Label.t * op * labeled * labeled
+  | LVar of Label.t * Var.t
+  | LFun of Label.t * Var.t * labeled
+  | LAp of Label.t * labeled * labeled
+  | LLet of Label.t * Var.t * labeled * labeled
+  | LInt of Label.t * int
+  | LBin of Label.t * op * labeled * labeled
 [@@deriving show, eq, ord]
 
 val label : t -> Label.t * labeled
