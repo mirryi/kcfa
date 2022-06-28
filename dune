@@ -3,4 +3,10 @@
 (library
  (name kcfa)
  (libraries containers)
+ (modules :standard \ Main)
  (preprocess (pps ppx_deriving.show ppx_deriving.eq ppx_deriving.ord)))
+
+(executable
+ (name main)
+ (modules Main)
+ (libraries kcfa))
