@@ -97,26 +97,29 @@ module Solver = struct
                s |> extend_edge p1 cc |> extend_edge p cc)
          State.init
 
-  let iterate : State.t -> State.t = function
+  let rec iterate : State.t -> State.t = function
     | ([], _, _) as s -> s
     | (q :: w, d, e) as s ->
         let open State in
         let ccs = find_edge q s in
 
-        ccs
-        |> List.fold_left
-             (fun s (cc : Constraint.t) ->
-               match cc with
-               | Concrete (_, _) -> s
-               | Subset (p1, p2) -> s |> add p2 (find_data p1 s)
-               | Conditional (t, p, p1, p2) ->
-                   if Values.subset (Values.singleton t) (find_data p s) then
-                     s |> add p2 (find_data p1 s)
-                   else s)
-             (w, d, e)
+        let s =
+          ccs
+          |> List.fold_left
+               (fun s (cc : Constraint.t) ->
+                 match cc with
+                 | Concrete (_, _) -> s
+                 | Subset (p1, p2) -> s |> add p2 (find_data p1 s)
+                 | Conditional (t, p, p1, p2) ->
+                     if Values.mem t (find_data p s) then
+                       s |> add p2 (find_data p1 s)
+                     else s)
+               (w, d, e)
+        in
+        iterate s
 
   let solve (ccs : Constraints.t) : Abstract.analysis =
-    let _, d, _ = init ccs |> iterate in
+    let _, d, _ = ccs |> init |> iterate in
     NodeMap.fold
       (fun p ts (ac, ae) ->
         match p with
