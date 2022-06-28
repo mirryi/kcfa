@@ -4,6 +4,7 @@ type t =
   | Var of Var.t
   | Fun of Var.t * t
   | Ap of t * t
+  | Let of Var.t * t * t
   | Int of int
   | Bin of op * t * t
 [@@deriving show, eq, ord]
@@ -12,6 +13,7 @@ type labeled =
   | Var of Label.t * Var.t
   | Fun of Label.t * Var.t * labeled
   | Ap of Label.t * labeled * labeled
+  | Let of Label.t * Var.t * labeled * labeled
   | Int of Label.t * int
   | Bin of Label.t * op * labeled * labeled
 [@@deriving show, eq, ord]
@@ -42,6 +44,10 @@ let label ast =
         let* f = label f in
         let* arg = label arg in
         Ap (l, f, arg) |> return
+    | Let (x, e1, e2) ->
+        let* e1 = label e1 in
+        let* e2 = label e2 in
+        Let (l, x, e1, e2) |> return
     | Int n -> Int (l, n) |> return
     | Bin (op, e1, e2) ->
         let* e1 = label e1 in
@@ -51,7 +57,12 @@ let label ast =
   label ast Label.init
 
 let label_of = function
-  | Var (l, _) | Fun (l, _, _) | Ap (l, _, _) | Int (l, _) | Bin (l, _, _, _) ->
+  | Var (l, _)
+  | Fun (l, _, _)
+  | Ap (l, _, _)
+  | Let (l, _, _, _)
+  | Int (l, _)
+  | Bin (l, _, _, _) ->
       l
 
 module Functions = Set.Make (struct
@@ -68,6 +79,7 @@ let functions astl =
     | Var (_, _) -> empty
     | Fun (_, _, body) -> union (singleton astl) (functions body)
     | Ap (_, f, arg) -> union (functions f) (functions arg)
+    | Let (_, _, e1, e2) -> union (functions e1) (functions e2)
     | Int (_, _) -> empty
     | Bin (_, _, e1, e2) -> union (functions e1) (functions e2)
   in
