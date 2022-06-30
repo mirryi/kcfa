@@ -1,5 +1,6 @@
 open Containers
 
+(** Sets of abstract values. *)
 module Values : sig
   include Set.S with type elt = Ast.labeled
 
@@ -25,5 +26,10 @@ module EnvMap : sig
 end
 
 type cache = Values.t CacheMap.t [@@deriving show]
+(** The type for abstract cache. *)
+
 type env = Values.t EnvMap.t [@@deriving show]
+(** The type for abstract environment. *)
+
 type analysis = cache * env [@@deriving show]
+(** The type for flow analysis result. *)

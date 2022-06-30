@@ -1,5 +1,7 @@
+(** The type for binary operations. *)
 type op = Add | Sub | Mult | Div [@@deriving show, eq, ord]
 
+(** The type for syntax trees. *)
 type t =
   | Var of Var.t
   | Fun of Var.t * t
@@ -9,6 +11,7 @@ type t =
   | Bin of op * t * t
 [@@deriving show, eq, ord]
 
+(** The type for labeled syntax trees. *)
 type labeled =
   | LVar of Label.t * Var.t
   | LFun of Label.t * Var.t * labeled
@@ -19,7 +22,11 @@ type labeled =
 [@@deriving show, eq, ord]
 
 val label : t -> Label.t * labeled
+(** [label ast] returns [astl] where [astl] is [ast] with all expressions
+    labeled. *)
+
 val label_of : labeled -> Label.t
+(** [label_of astl] returns the label of [astl]. *)
 
 module Functions : sig
   include Set.S with type elt = labeled
@@ -28,3 +35,4 @@ module Functions : sig
 end
 
 val functions : labeled -> Functions.t
+(** [functions astl] accumulates the set of functions in [astl]. *)

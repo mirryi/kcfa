@@ -29,8 +29,6 @@ module LabelMonad = struct
     get
 end
 
-(** [label ast] returns [astl] where [astl] is [ast] with all expressions
-    labeled. *)
 let label ast =
   let rec label (ast : t) =
     let open LabelMonad in
@@ -79,7 +77,6 @@ module Functions = struct
   let pp = M.pp pp_labeled
 end
 
-(** [functions astl] accumulates the set of functions in [astl]. *)
 let functions astl =
   let rec functions (astl : labeled) =
     let open Functions in

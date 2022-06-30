@@ -15,13 +15,11 @@ module Constraints = struct
 
   let pp = M.pp Constraint.pp
 
-  (** [constraints astl] computes the set of constraints used to perform
-      constraint-based 0-CFA analysis. *)
   let constraints astl =
     let ( +++ ) = union in
 
     let functions = Ast.functions astl in
-    let conditionals f =
+    let conditionals_of_functions f =
       functions |> Ast.Functions.to_seq |> Seq.filter_map f |> of_seq
     in
 
@@ -34,12 +32,12 @@ module Constraints = struct
           let l1 = Ast.label_of f in
           let l2 = Ast.label_of arg in
           constraints f +++ constraints arg
-          +++ conditionals (fun f ->
+          +++ conditionals_of_functions (fun f ->
                   match f with
                   | LFun (_, x, _) ->
                       Some (Conditional (f, Cache l1, Cache l2, Env x))
                   | _ -> None)
-          +++ conditionals (fun f ->
+          +++ conditionals_of_functions (fun f ->
                   match f with
                   | LFun (_, _, body) ->
                       Some
