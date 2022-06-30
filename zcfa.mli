@@ -10,6 +10,8 @@ module Constraint : sig
     | Concrete of Ast.labeled * Kind.t
     | Subset of Kind.t * Kind.t
     | Conditional of Ast.labeled * Kind.t * Kind.t * Kind.t
+    | Called of Kind.t
+    | CalledConditional of Kind.t * t list
   [@@deriving show, eq, ord]
 end
 
