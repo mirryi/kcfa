@@ -20,30 +20,32 @@ module Constraints = struct
 
     let functions = Ast.functions astl in
     let conditionals_of_functions f =
-      functions |> Ast.Functions.to_seq |> Seq.filter_map f |> of_seq
+      functions |> Ast.Functions.to_seq |> Seq.map f |> Seq.flat_map Seq.of_list
+      |> of_seq
     in
 
     let rec constraints (astl : Ast.labeled) =
       match astl with
       | LVar (l, x) -> singleton (Subset (Env x, Cache l))
-      | LFun (l, _, body) as f ->
-          singleton (Concrete (f, Cache l)) +++ constraints body
+      | LFun (l, _, body) ->
+          singleton (Concrete (astl, Cache l)) +++ constraints body
+      | LFix (l, f, _, body) ->
+          singleton (Concrete (astl, Cache l))
+          +++ constraints body
+          +++ singleton (Concrete (astl, Env f))
       | LAp (l, f, arg) ->
           let l1 = Ast.label_of f in
           let l2 = Ast.label_of arg in
           constraints f +++ constraints arg
           +++ conditionals_of_functions (fun f ->
                   match f with
-                  | LFun (_, x, _) ->
-                      Some (Conditional (f, Cache l1, Cache l2, Env x))
-                  | _ -> None)
-          +++ conditionals_of_functions (fun f ->
-                  match f with
-                  | LFun (_, _, body) ->
-                      Some
-                        (Conditional
-                           (f, Cache l1, Cache (Ast.label_of body), Cache l))
-                  | _ -> None)
+                  | LFun (_, x, body) | LFix (_, _, x, body) ->
+                      [
+                        Conditional (f, Cache l1, Cache l2, Env x);
+                        Conditional
+                          (f, Cache l1, Cache (Ast.label_of body), Cache l);
+                      ]
+                  | _ -> [])
       | LLet (l, x, e1, e2) ->
           let l1 = Ast.label_of e1 in
           let l2 = Ast.label_of e2 in

@@ -5,6 +5,7 @@ type op = Add | Sub | Mult | Div [@@deriving show, eq, ord]
 type t =
   | Var of Var.t
   | Fun of Var.t * t
+  | Fix of Var.t * Var.t * t
   | Ap of t * t
   | Let of Var.t * t * t
   | Int of int
@@ -14,6 +15,7 @@ type t =
 type labeled =
   | LVar of Label.t * Var.t
   | LFun of Label.t * Var.t * labeled
+  | LFix of Label.t * Var.t * Var.t * labeled
   | LAp of Label.t * labeled * labeled
   | LLet of Label.t * Var.t * labeled * labeled
   | LInt of Label.t * int
@@ -40,6 +42,9 @@ let label ast =
     | Fun (x, body) ->
         let* body = label body in
         LFun (l, x, body) |> return
+    | Fix (f, x, body) ->
+        let* body = label body in
+        LFix (l, f, x, body) |> return
     | Ap (f, arg) ->
         let* f = label f in
         let* arg = label arg in
@@ -59,6 +64,7 @@ let label ast =
 let label_of = function
   | LVar (l, _)
   | LFun (l, _, _)
+  | LFix (l, _, _, _)
   | LAp (l, _, _)
   | LLet (l, _, _, _)
   | LInt (l, _)
@@ -83,6 +89,7 @@ let functions astl =
     match astl with
     | LVar (_, _) -> empty
     | LFun (_, _, body) -> union (singleton astl) (functions body)
+    | LFix (_, _, _, body) -> union (singleton astl) (functions body)
     | LAp (_, f, arg) -> union (functions f) (functions arg)
     | LLet (_, _, e1, e2) -> union (functions e1) (functions e2)
     | LInt (_, _) -> empty

@@ -5,6 +5,7 @@ type op = Add | Sub | Mult | Div [@@deriving show, eq, ord]
 type t =
   | Var of Var.t
   | Fun of Var.t * t
+  | Fix of Var.t * Var.t * t
   | Ap of t * t
   | Let of Var.t * t * t
   | Int of int
@@ -15,6 +16,7 @@ type t =
 type labeled =
   | LVar of Label.t * Var.t
   | LFun of Label.t * Var.t * labeled
+  | LFix of Label.t * Var.t * Var.t * labeled
   | LAp of Label.t * labeled * labeled
   | LLet of Label.t * Var.t * labeled * labeled
   | LInt of Label.t * int
