@@ -13,8 +13,9 @@ type t =
   | Ctor of Var.t * t list
   | Case of t * rule list
 
-and rule = Rule of Var.t * bind list * t [@@deriving show, eq, ord]
-and bind = Bind of Var.t
+and rule = Rule of pat * t
+and pat = PCtor of Var.t * pat list | PVar of bind
+and bind = Bind of Var.t [@@deriving show, eq, ord]
 
 (** The type for labeled syntax trees. *)
 type t' =
@@ -28,7 +29,8 @@ type t' =
   | Ctor' of Label.t * Var.t * t' list
   | Case' of Label.t * t' * rule' list
 
-and rule' = Rule' of Label.t * Var.t * bind' list * t'
+and rule' = Rule' of Label.t * pat' * t'
+and pat' = PCtor' of Var.t * pat' list | PVar' of bind'
 and bind' = Bind' of Var.t [@@deriving show, eq, ord]
 
 val label : t -> Label.t * t'

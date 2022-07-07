@@ -13,8 +13,9 @@ type t =
   | Ctor of Var.t * t list
   | Case of t * rule list
 
-and rule = Rule of Var.t * bind list * t [@@deriving show, eq, ord]
-and bind = Bind of Var.t
+and rule = Rule of pat * t
+and pat = PCtor of Var.t * pat list | PVar of bind
+and bind = Bind of Var.t [@@deriving show, eq, ord]
 
 type t' =
   | Var' of Label.t * Var.t
@@ -27,7 +28,8 @@ type t' =
   | Ctor' of Label.t * Var.t * t' list
   | Case' of Label.t * t' * rule' list
 
-and rule' = Rule' of Label.t * Var.t * bind' list * t'
+and rule' = Rule' of Label.t * pat' * t'
+and pat' = PCtor' of Var.t * pat' list | PVar' of bind'
 and bind' = Bind' of Var.t [@@deriving show, eq, ord]
 
 module LabelMonad = struct
@@ -85,15 +87,22 @@ let label ast =
   and label_rule r =
     let* l = next in
     match r with
-    | Rule (name, binds, body) ->
-        let* binds = label_binds binds in
+    | Rule (p, body) ->
+        let* p = label_pat p in
         let* body = label body in
-        Rule' (l, name, binds, body) |> return
-  and label_binds = function
+        Rule' (l, p, body) |> return
+  and label_pats = function
     | [] -> [] |> return
-    | b :: binds ->
+    | p :: pats ->
+        let* p = label_pat p in
+        label_pats pats >>| fun pats -> p :: pats
+  and label_pat = function
+    | PCtor (name, pats) ->
+        let* pats = label_pats pats in
+        PCtor' (name, pats) |> return
+    | PVar b ->
         let* b = label_bind b in
-        label_binds binds >>| fun binds -> b :: binds
+        PVar' b |> return
   and label_bind b = match b with Bind x -> Bind' x |> return in
   label ast Label.init
 
@@ -136,7 +145,7 @@ let functions astl =
     | Case' (_, scrut, rs) -> union (functions scrut) (functions_rules rs)
   and functions_rules rs =
     rs |> List.map functions_rule |> List.fold_left union empty
-  and functions_rule = function Rule' (_, _, _, body) -> functions body in
+  and functions_rule = function Rule' (_, _, body) -> functions body in
 
   functions astl
 
@@ -168,8 +177,6 @@ let constructors astl =
     | Case' (_, scrut, rs) -> union (constructors scrut) (constructors_rules rs)
   and constructors_rules rs =
     rs |> List.map constructors_rule |> List.fold_left union empty
-  and constructors_rule = function
-    | Rule' (_, _, _, body) -> constructors body
-  in
+  and constructors_rule = function Rule' (_, _, body) -> constructors body in
 
   constructors astl

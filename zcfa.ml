@@ -30,6 +30,8 @@ module Constraints = struct
     in
 
     let rec constraints (astl : Ast.t') =
+      let open Ast in
+      let open Constraint in
       match astl with
       | Var' (l, x) -> singleton (Subset (Env x, Cache l))
       | Fun' (l, _, body) as astl ->
@@ -63,27 +65,49 @@ module Constraints = struct
           singleton (Concrete (astl, Cache l))
           +++ (args |> List.map constraints |> List.fold_left ( +++ ) empty)
       | Case' (l, scrut, rs) ->
+          (* [constraints_pat_ctor] [root_ctor] [scrut_l] [current_p]
+             [current_arg] recursively gathers constraints by pairing nested
+             patterns in [current_p] with potential values.
+          *)
+          let rec constraints_pat_ctor (root_ctor : Ast.t') (scrut_l : Label.t)
+              (current_p : Ast.pat') (current_arg : Ast.t') =
+            match current_p with
+            | PVar' (Bind' x) ->
+                let arg_l = Ast.label_of current_arg in
+                [ Conditional (root_ctor, Cache scrut_l, Cache arg_l, Env x) ]
+            | PCtor' (name, pats) ->
+                conditionals_of_constructors (function
+                  | Ctor' (_, name', args) when String.equal name name' ->
+                      List.combine pats args
+                      |> List.flat_map (fun (p, arg) ->
+                             constraints_pat_ctor root_ctor scrut_l p arg)
+                  | _ -> [])
+                |> to_list
+          in
+
           let scrut_l = Ast.label_of scrut in
           let rule_constraints =
             rs
-            |> List.map (function Ast.Rule' (_, name, binds, body) ->
-                   singleton (Subset (Cache (Ast.label_of body), Cache l))
+            |> List.map (function Rule' (_, p, body) ->
+                   (singleton (Subset (Cache (Ast.label_of body), Cache l))
                    +++ constraints body
-                   +++ conditionals_of_constructors (function
-                         | Ctor' (_, name', args) as e
+                   +++
+                   match p with
+                   | PVar' (Bind' x) ->
+                       singleton (Subset (Cache scrut_l, Env x))
+                   | PCtor' (name, pats) ->
+                       conditionals_of_constructors (function
+                         | Ctor' (_, name', args) as root_ctor
                            when String.equal name name' ->
-                             List.combine binds args
-                             |> List.map (fun (b, arg) ->
-                                    let arg_l = Ast.label_of arg in
-                                    match b with
-                                    | Ast.Bind' x ->
-                                        Constraint.Conditional
-                                          (e, Cache scrut_l, Cache arg_l, Env x))
-                         | _ -> []))
+                             List.combine pats args
+                             |> List.flat_map (fun (p, arg) ->
+                                    constraints_pat_ctor root_ctor scrut_l p arg)
+                         | _ -> [])))
             |> List.fold_left ( +++ ) empty
           in
           constraints scrut +++ rule_constraints
     in
+
     constraints astl
 end
 
