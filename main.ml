@@ -4,16 +4,16 @@ open Kcfa.Ast
 let () =
   (* Example 3.23 *)
   let ast =
-    LLet
+    Let'
       ( 14,
         "f",
-        LAp (13, LFun (12, "a", LVar (11, "a")), LFun (10, "b", LVar (9, "b"))),
-        LCase
+        Ap' (13, Fun' (12, "a", Var' (11, "a")), Fun' (10, "b", Var' (9, "b"))),
+        Case'
           ( 8,
-            LCtor (7, "Cons", [ LVar (6, "f"); LCtor (5, "Nil", []) ]),
+            Ctor' (7, "Cons", [ Var' (6, "f"); Ctor' (5, "Nil", []) ]),
             [
-              LRule (4, "Cons", [ LBind "x"; LBind "xs" ], LVar (3, "x"));
-              LRule (2, "Nil", [], LFun (1, "z", LVar (0, "z")));
+              Rule' (4, "Cons", [ Bind' "x"; Bind' "xs" ], Var' (3, "x"));
+              Rule' (2, "Nil", [], Fun' (1, "z", Var' (0, "z")));
             ] ) )
   in
 

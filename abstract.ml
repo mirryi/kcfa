@@ -2,14 +2,14 @@ open Containers
 
 module Values = struct
   module M = Set.Make (struct
-    type t = Ast.labeled
+    type t = Ast.t'
 
-    let compare = Ast.compare_labeled
+    let compare = Ast.compare_t'
   end)
 
   include M
 
-  let pp = M.pp Ast.pp_labeled
+  let pp = M.pp Ast.pp_t'
 end
 
 module Kind = struct

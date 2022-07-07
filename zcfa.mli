@@ -7,9 +7,9 @@ open Abstract
 module Constraint : sig
   (** The type for constraints. *)
   type t =
-    | Concrete of Ast.labeled * Kind.t
+    | Concrete of Ast.t' * Kind.t
     | Subset of Kind.t * Kind.t
-    | Conditional of Ast.labeled * Kind.t * Kind.t * Kind.t
+    | Conditional of Ast.t' * Kind.t * Kind.t * Kind.t
   [@@deriving show, eq, ord]
 end
 
@@ -20,10 +20,10 @@ module Constraints : sig
   val pp : t CCSet.printer
 end
 
-val label : Ast.t -> Ast.labeled
+val label : Ast.t -> Ast.t'
 (** [label ast] returns [astl] where [astl] is [ast] with unique labels. *)
 
-val constraints : Ast.labeled -> Constraints.t
+val constraints : Ast.t' -> Constraints.t
 (** [constraints astl] computes the set of constraints for [astl]. *)
 
 val solve : Constraints.t -> Abstract.analysis
@@ -32,5 +32,5 @@ val solve : Constraints.t -> Abstract.analysis
 val analyse : Ast.t -> Abstract.analysis
 (** [analyse ast] performs 0-CFA analysis on [ast]. *)
 
-val analyse_labeled : Ast.labeled -> Abstract.analysis
+val analyse_labeled : Ast.t' -> Abstract.analysis
 (** [analyse_labeled astl] is [analyse] but for [!type:Ast.labeled] *)

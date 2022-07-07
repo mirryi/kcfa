@@ -2,7 +2,7 @@ open Containers
 
 (** Sets of abstract values. *)
 module Values : sig
-  include Set.S with type elt = Ast.labeled
+  include Set.S with type elt = Ast.t'
 
   val pp : t CCSet.printer
 end

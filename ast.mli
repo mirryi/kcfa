@@ -17,41 +17,41 @@ and rule = Rule of Var.t * bind list * t [@@deriving show, eq, ord]
 and bind = Bind of Var.t
 
 (** The type for labeled syntax trees. *)
-type labeled =
-  | LVar of Label.t * Var.t
-  | LFun of Label.t * Var.t * labeled
-  | LFix of Label.t * Var.t * Var.t * labeled
-  | LAp of Label.t * labeled * labeled
-  | LLet of Label.t * Var.t * labeled * labeled
-  | LInt of Label.t * int
-  | LBin of Label.t * op * labeled * labeled
-  | LCtor of Label.t * Var.t * labeled list
-  | LCase of Label.t * labeled * labeled_rule list
+type t' =
+  | Var' of Label.t * Var.t
+  | Fun' of Label.t * Var.t * t'
+  | Fix' of Label.t * Var.t * Var.t * t'
+  | Ap' of Label.t * t' * t'
+  | Let' of Label.t * Var.t * t' * t'
+  | Int' of Label.t * int
+  | Bin' of Label.t * op * t' * t'
+  | Ctor' of Label.t * Var.t * t' list
+  | Case' of Label.t * t' * rule' list
 
-and labeled_rule = LRule of Label.t * Var.t * labeled_bind list * labeled
-and labeled_bind = LBind of Var.t [@@deriving show, eq, ord]
+and rule' = Rule' of Label.t * Var.t * bind' list * t'
+and bind' = Bind' of Var.t [@@deriving show, eq, ord]
 
-val label : t -> Label.t * labeled
+val label : t -> Label.t * t'
 (** [label ast] returns [astl] where [astl] is [ast] with all expressions
     labeled. *)
 
-val label_of : labeled -> Label.t
+val label_of : t' -> Label.t
 (** [label_of astl] returns the label of [astl]. *)
 
 module Functions : sig
-  include Set.S with type elt = labeled
+  include Set.S with type elt = t'
 
   val pp : t CCSet.printer
 end
 
-val functions : labeled -> Functions.t
+val functions : t' -> Functions.t
 (** [functions astl] accumulates the set of functions in [astl]. *)
 
 module Constructors : sig
-  include Set.S with type elt = labeled
+  include Set.S with type elt = t'
 
   val pp : t CCSet.printer
 end
 
-val constructors : labeled -> Constructors.t
+val constructors : t' -> Constructors.t
 (** [constructors astl] accumulates the set of data constructions in [astl]. *)

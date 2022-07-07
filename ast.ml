@@ -16,19 +16,19 @@ type t =
 and rule = Rule of Var.t * bind list * t [@@deriving show, eq, ord]
 and bind = Bind of Var.t
 
-type labeled =
-  | LVar of Label.t * Var.t
-  | LFun of Label.t * Var.t * labeled
-  | LFix of Label.t * Var.t * Var.t * labeled
-  | LAp of Label.t * labeled * labeled
-  | LLet of Label.t * Var.t * labeled * labeled
-  | LInt of Label.t * int
-  | LBin of Label.t * op * labeled * labeled
-  | LCtor of Label.t * Var.t * labeled list
-  | LCase of Label.t * labeled * labeled_rule list
+type t' =
+  | Var' of Label.t * Var.t
+  | Fun' of Label.t * Var.t * t'
+  | Fix' of Label.t * Var.t * Var.t * t'
+  | Ap' of Label.t * t' * t'
+  | Let' of Label.t * Var.t * t' * t'
+  | Int' of Label.t * int
+  | Bin' of Label.t * op * t' * t'
+  | Ctor' of Label.t * Var.t * t' list
+  | Case' of Label.t * t' * rule' list
 
-and labeled_rule = LRule of Label.t * Var.t * labeled_bind list * labeled
-and labeled_bind = LBind of Var.t [@@deriving show, eq, ord]
+and rule' = Rule' of Label.t * Var.t * bind' list * t'
+and bind' = Bind' of Var.t [@@deriving show, eq, ord]
 
 module LabelMonad = struct
   include Monad.State (Label)
@@ -45,33 +45,33 @@ let label ast =
   let rec label ast =
     let* l = next in
     match ast with
-    | Var x -> LVar (l, x) |> return
+    | Var x -> Var' (l, x) |> return
     | Fun (x, body) ->
         let* body = label body in
-        LFun (l, x, body) |> return
+        Fun' (l, x, body) |> return
     | Fix (f, x, body) ->
         let* body = label body in
-        LFix (l, f, x, body) |> return
+        Fix' (l, f, x, body) |> return
     | Ap (f, arg) ->
         let* f = label f in
         let* arg = label arg in
-        LAp (l, f, arg) |> return
+        Ap' (l, f, arg) |> return
     | Let (x, e1, e2) ->
         let* e1 = label e1 in
         let* e2 = label e2 in
-        LLet (l, x, e1, e2) |> return
-    | Int n -> LInt (l, n) |> return
+        Let' (l, x, e1, e2) |> return
+    | Int n -> Int' (l, n) |> return
     | Bin (op, e1, e2) ->
         let* e1 = label e1 in
         let* e2 = label e2 in
-        LBin (l, op, e1, e2) |> return
+        Bin' (l, op, e1, e2) |> return
     | Ctor (name, args) ->
         let* args = label_list args in
-        LCtor (l, name, args) |> return
+        Ctor' (l, name, args) |> return
     | Case (scrut, rs) ->
         let* scrut = label scrut in
         let* rs = label_rules rs in
-        LCase (l, scrut, rs) |> return
+        Case' (l, scrut, rs) |> return
   and label_list = function
     | [] -> [] |> return
     | e :: es ->
@@ -88,88 +88,88 @@ let label ast =
     | Rule (name, binds, body) ->
         let* binds = label_binds binds in
         let* body = label body in
-        LRule (l, name, binds, body) |> return
+        Rule' (l, name, binds, body) |> return
   and label_binds = function
     | [] -> [] |> return
     | b :: binds ->
         let* b = label_bind b in
         label_binds binds >>| fun binds -> b :: binds
-  and label_bind b = match b with Bind x -> LBind x |> return in
+  and label_bind b = match b with Bind x -> Bind' x |> return in
   label ast Label.init
 
 let label_of = function
-  | LVar (l, _)
-  | LFun (l, _, _)
-  | LFix (l, _, _, _)
-  | LAp (l, _, _)
-  | LLet (l, _, _, _)
-  | LInt (l, _)
-  | LBin (l, _, _, _)
-  | LCtor (l, _, _)
-  | LCase (l, _, _) ->
+  | Var' (l, _)
+  | Fun' (l, _, _)
+  | Fix' (l, _, _, _)
+  | Ap' (l, _, _)
+  | Let' (l, _, _, _)
+  | Int' (l, _)
+  | Bin' (l, _, _, _)
+  | Ctor' (l, _, _)
+  | Case' (l, _, _) ->
       l
 
 module Functions = struct
   module M = Set.Make (struct
-    type nonrec t = labeled
+    type nonrec t = t'
 
-    let compare = compare_labeled
+    let compare = compare_t'
   end)
 
   include M
 
-  let pp = M.pp pp_labeled
+  let pp = M.pp pp_t'
 end
 
 let functions astl =
   let open Functions in
   let rec functions = function
-    | LVar (_, _) -> empty
-    | LFun (_, _, body) as astl -> union (singleton astl) (functions body)
-    | LFix (_, _, _, body) as astl -> union (singleton astl) (functions body)
-    | LAp (_, f, arg) -> union (functions f) (functions arg)
-    | LLet (_, _, e1, e2) -> union (functions e1) (functions e2)
-    | LInt (_, _) -> empty
-    | LBin (_, _, e1, e2) -> union (functions e1) (functions e2)
-    | LCtor (_, _, args) ->
+    | Var' (_, _) -> empty
+    | Fun' (_, _, body) as astl -> union (singleton astl) (functions body)
+    | Fix' (_, _, _, body) as astl -> union (singleton astl) (functions body)
+    | Ap' (_, f, arg) -> union (functions f) (functions arg)
+    | Let' (_, _, e1, e2) -> union (functions e1) (functions e2)
+    | Int' (_, _) -> empty
+    | Bin' (_, _, e1, e2) -> union (functions e1) (functions e2)
+    | Ctor' (_, _, args) ->
         args |> List.map functions |> List.fold_left union empty
-    | LCase (_, scrut, rs) -> union (functions scrut) (functions_rules rs)
+    | Case' (_, scrut, rs) -> union (functions scrut) (functions_rules rs)
   and functions_rules rs =
     rs |> List.map functions_rule |> List.fold_left union empty
-  and functions_rule = function LRule (_, _, _, body) -> functions body in
+  and functions_rule = function Rule' (_, _, _, body) -> functions body in
 
   functions astl
 
 module Constructors = struct
   module M = Set.Make (struct
-    type nonrec t = labeled
+    type nonrec t = t'
 
-    let compare = compare_labeled
+    let compare = compare_t'
   end)
 
   include M
 
-  let pp = M.pp pp_labeled
+  let pp = M.pp pp_t'
 end
 
 let constructors astl =
   let open Constructors in
   let rec constructors = function
-    | LVar (_, _) -> empty
-    | LFun (_, _, body) -> constructors body
-    | LFix (_, _, _, body) -> constructors body
-    | LAp (_, f, arg) -> union (constructors f) (constructors arg)
-    | LLet (_, _, e1, e2) -> union (constructors e1) (constructors e2)
-    | LInt (_, _) -> empty
-    | LBin (_, _, e1, e2) -> union (constructors e1) (constructors e2)
-    | LCtor (_, _, args) as astl ->
+    | Var' (_, _) -> empty
+    | Fun' (_, _, body) -> constructors body
+    | Fix' (_, _, _, body) -> constructors body
+    | Ap' (_, f, arg) -> union (constructors f) (constructors arg)
+    | Let' (_, _, e1, e2) -> union (constructors e1) (constructors e2)
+    | Int' (_, _) -> empty
+    | Bin' (_, _, e1, e2) -> union (constructors e1) (constructors e2)
+    | Ctor' (_, _, args) as astl ->
         union (singleton astl)
           (args |> List.map constructors |> List.fold_left union empty)
-    | LCase (_, scrut, rs) -> union (constructors scrut) (constructors_rules rs)
+    | Case' (_, scrut, rs) -> union (constructors scrut) (constructors_rules rs)
   and constructors_rules rs =
     rs |> List.map constructors_rule |> List.fold_left union empty
   and constructors_rule = function
-    | LRule (_, _, _, body) -> constructors body
+    | Rule' (_, _, _, body) -> constructors body
   in
 
   constructors astl

@@ -3,9 +3,9 @@ open Abstract
 
 module Constraint = struct
   type t =
-    | Concrete of Ast.labeled * Kind.t
+    | Concrete of Ast.t' * Kind.t
     | Subset of Kind.t * Kind.t
-    | Conditional of Ast.labeled * Kind.t * Kind.t * Kind.t
+    | Conditional of Ast.t' * Kind.t * Kind.t * Kind.t
   [@@deriving show, eq, ord]
 end
 
@@ -29,54 +29,54 @@ module Constraints = struct
       |> Seq.flat_map Seq.of_list |> of_seq
     in
 
-    let rec constraints (astl : Ast.labeled) =
+    let rec constraints (astl : Ast.t') =
       match astl with
-      | LVar (l, x) -> singleton (Subset (Env x, Cache l))
-      | LFun (l, _, body) as astl ->
+      | Var' (l, x) -> singleton (Subset (Env x, Cache l))
+      | Fun' (l, _, body) as astl ->
           singleton (Concrete (astl, Cache l)) +++ constraints body
-      | LFix (l, f, _, body) as astl ->
+      | Fix' (l, f, _, body) as astl ->
           singleton (Concrete (astl, Cache l))
           +++ constraints body
           +++ singleton (Concrete (astl, Env f))
-      | LAp (l, f, arg) ->
+      | Ap' (l, f, arg) ->
           let l1 = Ast.label_of f in
           let l2 = Ast.label_of arg in
           constraints f +++ constraints arg
           +++ conditionals_of_functions (fun f ->
                   match f with
-                  | LFun (_, x, body) | LFix (_, _, x, body) ->
+                  | Fun' (_, x, body) | Fix' (_, _, x, body) ->
                       [
                         Conditional (f, Cache l1, Cache l2, Env x);
                         Conditional
                           (f, Cache l1, Cache (Ast.label_of body), Cache l);
                       ]
                   | _ -> [])
-      | LLet (l, x, e1, e2) ->
+      | Let' (l, x, e1, e2) ->
           let l1 = Ast.label_of e1 in
           let l2 = Ast.label_of e2 in
           constraints e1 +++ constraints e2
           +++ singleton (Subset (Cache l1, Env x))
           +++ singleton (Subset (Cache l2, Cache l))
-      | LInt (_, _) -> empty
-      | LBin (_, _, e1, e2) -> constraints e1 +++ constraints e2
-      | LCtor (l, _, args) ->
+      | Int' (_, _) -> empty
+      | Bin' (_, _, e1, e2) -> constraints e1 +++ constraints e2
+      | Ctor' (l, _, args) ->
           singleton (Concrete (astl, Cache l))
           +++ (args |> List.map constraints |> List.fold_left ( +++ ) empty)
-      | LCase (l, scrut, rs) ->
+      | Case' (l, scrut, rs) ->
           let scrut_l = Ast.label_of scrut in
           let rule_constraints =
             rs
-            |> List.map (function Ast.LRule (_, name, binds, body) ->
+            |> List.map (function Ast.Rule' (_, name, binds, body) ->
                    singleton (Subset (Cache (Ast.label_of body), Cache l))
                    +++ constraints body
                    +++ conditionals_of_constructors (function
-                         | LCtor (_, name', args) as e
+                         | Ctor' (_, name', args) as e
                            when String.equal name name' ->
                              List.combine binds args
                              |> List.map (fun (b, arg) ->
                                     let arg_l = Ast.label_of arg in
                                     match b with
-                                    | Ast.LBind x ->
+                                    | Ast.Bind' x ->
                                         Constraint.Conditional
                                           (e, Cache scrut_l, Cache arg_l, Env x))
                          | _ -> []))
@@ -142,7 +142,6 @@ module Solver = struct
   let rec iterate : State.t -> State.t = function
     | ([], _, _) as s -> s
     | (q :: w, d, e) as s ->
-
         let open State in
         let ccs = find_edge q s in
 
